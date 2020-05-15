@@ -410,6 +410,15 @@ class Flame final {
                                     std::vector<bool>* validity,
                                     utils::StatsTracker* stats);
 
+  // Filter triangles with long 3d edges 
+  static void edgeLength3DFilter(const Params& params,
+                                    const Matrix3f& Kinv,
+                                    const std::vector<Point2f>& vertices,
+                                    const std::vector<float>& idepths,
+                                    const std::vector<Triangle>& triangles,
+                                    std::vector<bool>* validity,
+                                    utils::StatsTracker* stats);
+
   // Filter triangles with long edges.
   static void edgeLengthFilter(const Params& params,
                                int width, int height,

@@ -394,6 +394,12 @@ bool Flame::update(double time, uint32_t img_id,
                           triangles_curr_, &tri_validity_, &stats_);
   }
 
+  if(params_.do_edge_length_3d_filter){
+
+    edgeLength3DFilter(params_, Kinv_, vtx_, vtx_idepths_,
+                          triangles_curr_, &tri_validity_, &stats_);
+  }
+
   if (params_.do_edge_length_filter) {
     // Filter triangles with long edges. This is only for display purposes. The
     // actual graph will contain all the triangles.
@@ -410,7 +416,9 @@ bool Flame::update(double time, uint32_t img_id,
   stats_.tick("interpolate");
   std::vector<bool> vtx_validity(vtx_.size(), true);
   idepthmap_ = std::numeric_limits<float>::quiet_NaN();
-  std::vector<bool> tri_validity_true(triangles_curr_.size(), true);
+  // std::vector<bool> tri_validity_true(triangles_curr_.size(), true);
+
+  std::vector<bool> tri_validity_true = tri_validity_; 
   utils::interpolateMesh(triangles_curr_, vtx_, vtx_idepths_,
                          vtx_validity, tri_validity_true, &idepthmap_);
 
@@ -506,6 +514,9 @@ bool Flame::update(double time, uint32_t img_id,
   }
 
   if (params_.debug_draw_idepthmap) {
+
+    printf("frame.cc: debug_draw_idepthmap: image id: %ld  time: %lf is_pose: %s\n", img_id, time, (is_poseframe?"yes":"no"));
+
     drawInverseDepthMap(params_, fnew_->img[0], idepthmap_, &stats_,
                         &debug_img_idepthmap_);
   }
@@ -2278,6 +2289,64 @@ void Flame::obliqueTriangleFilter(const Params& params,
     printf("Flame/oblique_triangle_filter = %f ms\n",
            stats->timings("oblique_triangle_filter"));
   }
+
+  return;
+}
+
+void Flame::edgeLength3DFilter(const Params& params,
+                                  const Matrix3f& Kinv,
+                                  const std::vector<cv::Point2f>& vertices,
+                                  const std::vector<float>& idepths,
+                                  const std::vector<Triangle>& triangles,
+                                  std::vector<bool>* validity,
+                                  utils::StatsTracker* stats) {
+  // stats->tick("edgeLength3DFilter");
+
+  if (validity->size() != triangles.size()) {
+    validity->assign(triangles.size(), true);
+  }
+
+  for (int ii = 0; ii < triangles.size(); ++ii) {
+    // NOTE: Triangle spits out points in clock-wise order.
+    float id0 = idepths[triangles[ii][0]];
+    float id1 = idepths[triangles[ii][1]];
+    float id2 = idepths[triangles[ii][2]];
+
+    Vector3f p0(vertices[triangles[ii][0]].x,
+                vertices[triangles[ii][0]].y,
+                1.0f);
+    p0 = Kinv * p0 / id0;
+
+    Vector3f p1(vertices[triangles[ii][1]].x,
+                vertices[triangles[ii][1]].y,
+                1.0f);
+    p1 = Kinv * p1 / id1;
+
+    Vector3f p2(vertices[triangles[ii][2]].x,
+                vertices[triangles[ii][2]].y,
+                1.0f);
+    p2 = Kinv * p2 / id2;
+
+    // Inward-facing normal.
+    Vector3f delta1(p1 - p0);
+    Vector3f delta2(p2 - p0);
+    Vector3f delta3(p1 - p2);
+
+    float edge1_len = delta1.norm(); 
+    float edge2_len = delta2.norm(); 
+    float edge3_len = delta3.norm(); 
+
+    if(edge1_len >= params.edge_length_3d_thresh || edge2_len >= params.edge_length_3d_thresh || edge3_len >= params.edge_length_3d_thresh){
+      (*validity)[ii] = false; 
+    }
+  }
+  // stats->tock("edgeLength3DFilter");
+
+  // if (!params.debug_quiet &&
+  //     params.debug_print_timing_oblique_triangle_filter) {
+  //   printf("Flame/oblique_triangle_filter = %f ms\n",
+  //          stats->timings("oblique_triangle_filter"));
+  // }
 
   return;
 }

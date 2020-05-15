@@ -69,6 +69,10 @@ struct Params {
   // Filter oblique triangles (only for display purposes).
   bool do_oblique_triangle_filter = true;
   float oblique_normal_thresh = 1.39626; // 80 degrees. Max angle between
+
+  bool do_edge_length_3d_filter = false;
+  float edge_length_3d_thresh = 0.2; // 
+
   // surface normal and viewing ray.
   float oblique_idepth_diff_factor = 0.35f; // Filter triangle if (max_idepth -
                                             // min_idepth)/max_idepth is greater
