@@ -417,7 +417,6 @@ bool Flame::update(double time, uint32_t img_id,
   std::vector<bool> vtx_validity(vtx_.size(), true);
   idepthmap_ = std::numeric_limits<float>::quiet_NaN();
   // std::vector<bool> tri_validity_true(triangles_curr_.size(), true);
-
   std::vector<bool> tri_validity_true = tri_validity_; 
   utils::interpolateMesh(triangles_curr_, vtx_, vtx_idepths_,
                          vtx_validity, tri_validity_true, &idepthmap_);
@@ -2339,6 +2338,18 @@ void Flame::edgeLength3DFilter(const Params& params,
     if(edge1_len >= params.edge_length_3d_thresh || edge2_len >= params.edge_length_3d_thresh || edge3_len >= params.edge_length_3d_thresh){
       (*validity)[ii] = false; 
     }
+
+    float max_len = edge1_len; 
+    float min_len = edge1_len; 
+    if(max_len < edge2_len) max_len = edge2_len; 
+    if(min_len > edge2_len) min_len = edge2_len; 
+    if(max_len < edge3_len) max_len = edge3_len; 
+    if(min_len > edge3_len) min_len = edge3_len;
+
+    if(max_len/min_len >= 3.){//params.edge_len_ratio_max_min_threshold){
+      (*validity)[ii] = false; 
+    }
+
   }
   // stats->tock("edgeLength3DFilter");
 
